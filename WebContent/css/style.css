@@ -1,0 +1,21 @@
+/*
+    Cascading Style Sheet by JS
+
+    iferegi/aatt/gmail.com
+    Start - 04.02.2014
+*/
+
+body {
+	background:gray;
+	padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+}
+
+
+div#container {
+	margin: 0px auto;
+	width: 70%;
+}
+
+.hiddeMe {
+	display: none;
+}
