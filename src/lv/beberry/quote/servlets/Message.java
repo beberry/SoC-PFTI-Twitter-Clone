@@ -149,20 +149,38 @@ public class Message extends HttpServlet {
 		}
 		else
 		{
-			String username = (String)session.getAttribute("userid");
-			String tweet	= request.getParameter("tweetText");
-			
-			
-			String args[]=Convertors.SplitRequestPath(request);
-			
-			// To-Do: Remove html, and other crap from the data + trim it.
-			
-			
-			// Insert data into the db.
 			TweetModel tm = new TweetModel();
 			tm.setCluster(cluster);
 			
-			tm.addTweets(username,tweet);
+			String args[]=Convertors.SplitRequestPath(request);
+			
+			if(request.getParameter("delete-quoteId") != null)
+			{
+				// Is trying to delete a quote.
+				
+				if(tm.canTweetBeDeleted((String)session.getAttribute("userid"),request.getParameter("delete-ownerId"),request.getParameter("delete-quoteId")))
+				{
+					// The user can delete this quote.
+					
+					// Delete the quote.
+					tm.deleteTweet(request.getParameter("delete-ownerId"),request.getParameter("delete-quoteId"));
+				}	
+			}
+			else
+			{
+				String username = (String)session.getAttribute("userid");
+				String tweet	= request.getParameter("tweetText");
+				
+				
+				
+				
+				// To-Do: Remove html, and other crap from the data + trim it.
+				
+				
+				// Insert data into the db.
+				
+				tm.addTweets(username,tweet);
+			}
 			
 			// Display the list of tweets.
 	

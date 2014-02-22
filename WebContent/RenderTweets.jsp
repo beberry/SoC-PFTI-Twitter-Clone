@@ -95,8 +95,26 @@ while (iterator.hasNext()){
 	TweetStore ts = (TweetStore)iterator.next();
 	
 	%>
-	<a href="/leQuote/message/message/<%=ts.getTimeUuid().toString() %>" ><span style="display:block;width:100%;"><%=ts.getTweet() %></span></a> by <a href="/leQuote/message/user/<%=ts.getUser() %>" ><%=ts.getUser() %></a> at <%=ts.getDateFromUuid() %><br/><br /><br /><%
-	
+	<div>
+		<div style="width:80%;float:left;">
+			<a href="/leQuote/message/message/<%=ts.getTimeUuid().toString() %>" ><span style="display:block;width:100%;"><%=ts.getTweet() %></span></a> by <a href="/leQuote/message/user/<%=ts.getUser() %>" ><%=ts.getUser() %></a> at <%=ts.getDateFromUuid() %><br/><br /><br />
+		</div>
+		<% 
+		if(ts.getUser().equals(session.getAttribute("userid")))
+		{
+		%>
+		<div style="width:20%;float:left;">
+			<form role="form" action="/leQuote/message" method="post">
+				<input type="hidden" name="delete-ownerId" value="<%=ts.getUser() %>" />
+				<input type="hidden" name="delete-quoteId" value="<%=ts.getTimeUuid() %>" />
+				<button type="submit" class="btn btn-danger">Delete</button>
+			</form>
+		</div>
+		<% 
+		}
+		%>
+	</div>
+	<%
 }
 }
 %>

@@ -1,5 +1,7 @@
 package lv.beberry.quote.stores;
 
+import java.util.Set;
+
 
 /**
  * 
@@ -13,6 +15,10 @@ public class UserStore {
 	private String username;
 	private String email;
 	private String hashedPass;
+
+	
+	private Set<String> permissionsGranted;
+
 	public boolean valid;
     
 	// Get the username of this user.
@@ -39,6 +45,11 @@ public class UserStore {
 		this.email = email;
 	}
 	
+	public void setPermissions(Set<String> permissions)
+	{
+		this.permissionsGranted = permissions;
+	}
+	
 	// Get the hashed password.
 	public String getHashedPass()
 	{
@@ -61,5 +72,17 @@ public class UserStore {
 	public void setValid(boolean state)
 	{
 		this.valid = state;
+	}
+	
+	public boolean hasRights(String permission)
+	{
+		if(this.permissionsGranted.contains(permission))
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 }

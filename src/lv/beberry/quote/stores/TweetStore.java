@@ -13,6 +13,8 @@ public class TweetStore implements Comparable<TweetStore>{
      String User;
      UUID timeUuid;
      
+     public boolean canBeDeleted;
+     
      public String getTweet(){
     	 return Tweet;
      }

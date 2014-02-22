@@ -16,8 +16,11 @@ public final class Keyspaces {
 		
 		ArrayList<String> commands = new ArrayList<String>();
 		
+		
+		
 		commands.add("CREATE KEYSPACE IF NOT EXISTS Quotes WITH replication = {'class':'SimpleStrategy', 'replication_factor':1}");
-		commands.add("CREATE TABLE IF NOT EXISTS Quotes.Users (Username varchar, Dateuuid uuid, Email varchar,Password varchar, Followers int, Following int, PRIMARY KEY(Username, Dateuuid))");
+		commands.add("CREATE TABLE IF NOT EXISTS Quotes.Users (Username varchar, Dateuuid uuid, Email varchar,Password varchar, Permissions set<varchar>, PRIMARY KEY(Username))");
+		commands.add("CREATE TABLE IF NOT EXISTS Quotes.Userstats (Username varchar, Followers counter, Following counter, Tweets counter, PRIMARY KEY(Username))");
 		commands.add("CREATE INDEX IF NOT EXISTS passwordIndex ON Quotes.Users (Password)");
 		commands.add("CREATE TABLE IF NOT EXISTS Quotes.User_dictionary (Dict_Key varchar, Username varchar, PRIMARY KEY(Dict_Key,Username))");
 		commands.add("CREATE TABLE IF NOT EXISTS Quotes.Main_timeline (Author varchar, Quote_id uuid, Text varchar, Retweets int, PRIMARY KEY(Author,Quote_Id))");

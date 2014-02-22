@@ -110,6 +110,40 @@ public class UserModel {
 		
 	}
 	
+	public UserStore getUser(String username)
+	{
+
+		Session session = cluster.connect(keyspace);
+		
+		PreparedStatement statement = session.prepare("SELECT * FROM users WHERE username='"+username+"';");
+		BoundStatement boundStatement = new BoundStatement(statement);
+		ResultSet rs = session.execute(boundStatement);
+		
+		if (rs.isExhausted())
+		{
+			
+			// User with such details found.
+			
+			Row row = rs.one();
+			
+			UserStore us = new UserStore();
+			us.setUsername(row.getString("Username"));
+			us.setEmail(row.getString("Email"));
+			us.setHashedPass(row.getString("Password"));
+			us.setPermissions(row.getSet("Permissions", String.class));
+			
+			session.close();
+			return us;
+		}
+		else
+		{
+			System.out.println("User not found found.");
+			
+			session.close();
+			return null;
+		}
+		
+	}
 	
 	/**
 	 * 
@@ -202,7 +236,7 @@ public class UserModel {
 			// Can insert user info into the db.
 			
 			
-			statement = session.prepare("INSERT INTO users (Username, Dateuuid, Email,Password, Followers, Following) values('"+username+"',"+userUuid+",'"+email+"','"+hashedPass+"',0,0);");
+			statement = session.prepare("INSERT INTO users (Username, Dateuuid, Email,Password) values('"+username+"',"+userUuid+",'"+email+"','"+hashedPass+"');");
 			boundStatement = new BoundStatement(statement);
 			
 			rs = session.execute(boundStatement);
@@ -308,6 +342,7 @@ public class UserModel {
 	
 	public ArrayList<String> getSuggestions(String q)
 	{
+
 		ArrayList<String> results = new ArrayList<String>();
 		
 		// Now make a request for this query.
@@ -318,9 +353,11 @@ public class UserModel {
 		ResultSet rs = session.execute(boundStatement);
 		
 		if (rs.isExhausted()) {
+
 			return null;
 		} else {
 			for (Row row : rs) {
+
 				results.add(row.getString("Username"));
 			}
 		}
@@ -328,7 +365,7 @@ public class UserModel {
 		
 		// Now sort the list.
 		Collections.sort(results.subList(1, results.size()));
-		
+
 		return results;
 	}
 	
@@ -378,15 +415,32 @@ public class UserModel {
 		
 		ResultSet rs = session.execute(boundStatement);
 		
+		
 		// Add the record - which user is followed by which
 		statement = session.prepare("INSERT INTO Followed (Username, Followed) VALUES('"+followsUsername+"','"+whoUsername+"');");
 		boundStatement = new BoundStatement(statement);
 		
 		rs = session.execute(boundStatement);
 		
+		
+		// Inceremnt userstats
+		
 		if (rs.isExhausted()) {
+			statement = session.prepare("UPDATE Userstats SET Following=Following+1 WHERE Username='"+whoUsername+"'");
+			boundStatement = new BoundStatement(statement);
+			
+			rs = session.execute(boundStatement);
+			
+			statement = session.prepare("UPDATE Userstats SET Followers=Followers+1 WHERE Username='"+followsUsername+"'");
+			boundStatement = new BoundStatement(statement);
+			
+			
+			rs = session.execute(boundStatement);
+			
 			session.close();
 		} else {
+		
+			
 			session.close();
 		}
 	}	
@@ -409,8 +463,20 @@ public class UserModel {
 		rs = session.execute(boundStatement);
 		
 		if (rs.isExhausted()) {
+			statement = session.prepare("UPDATE Userstats SET Following=Following-1 WHERE Username='"+whoUsername+"'");
+			boundStatement = new BoundStatement(statement);
+			
+			rs = session.execute(boundStatement);
+			
+			statement = session.prepare("UPDATE Userstats SET Followers=Followers-1 WHERE Username='"+unfollowsUsername+"'");
+			boundStatement = new BoundStatement(statement);
+			
+			rs = session.execute(boundStatement);
+			
 			session.close();
 		} else {
+			
+			
 			session.close();
 		}
 	}
