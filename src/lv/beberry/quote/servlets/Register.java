@@ -36,11 +36,9 @@ public class Register extends HttpServlet {
      */
     public Register() {
         super();
-        // TODO Auto-generated constructor stub
     }
     
     public void init(ServletConfig config) throws ServletException {
-		// TODO Auto-generated method stub
 		cluster = CassandraHosts.getCluster();
 	}
     
@@ -48,20 +46,29 @@ public class Register extends HttpServlet {
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+	{
+		HttpSession session = request.getSession();
 		
-		// Display the login form.
-		RequestDispatcher rd = request.getRequestDispatcher("/Register.jsp"); 
-		
-		rd.forward(request, response);
+		if ((session.getAttribute("userid") == null) || (session.getAttribute("userid") == ""))
+		{
+			// Display login page...
+			RequestDispatcher rd = request.getRequestDispatcher("/Register.jsp"); 
+			
+			rd.forward(request, response);
+		}
+		else
+		{
+			// Already logged in, don't display this form.
+			
+			response.sendRedirect("/leQuote/message/");
+		}
 	}
 
 	/**
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
 		// TODO prevent XSS and cql injections.
 		
 		HttpSession session = request.getSession();
@@ -70,8 +77,8 @@ public class Register extends HttpServlet {
 		if ((session.getAttribute("userid") != null) && (session.getAttribute("userid") != ""))
 		{
 			// Don't do anything.. 
+			response.sendRedirect("/leQuote/message/");
 			
-			// Display tweets?
 		}
 		else
 		{

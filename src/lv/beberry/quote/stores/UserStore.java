@@ -1,7 +1,7 @@
 package lv.beberry.quote.stores;
 
+import java.util.HashSet;
 import java.util.Set;
-
 
 /**
  * 
@@ -10,17 +10,57 @@ import java.util.Set;
  * This is a bean that will be used for the user authentication system.
  */
 
-public class UserStore {
-	
+public class UserStore
+{
 	private String username;
 	private String email;
 	private String hashedPass;
-
+	private String about;
 	
-	private Set<String> permissionsGranted;
+	private int tweetCount;
+	private int followerCount;
+	private int followingCount;
+
+	private Set<String> permissionsGranted;  // Not used in this version.
 
 	public boolean valid;
     
+	public UserStore()
+	{
+		this.permissionsGranted = new HashSet<String>();
+		this.about = "";
+	}
+	
+	public int getTweetCount()
+	{
+		return this.tweetCount;
+	}
+	
+	public void setTweetCount(int count)
+	{
+		this.tweetCount = count;
+	}
+	
+	public int getFollowingCount()
+	{
+		return this.followingCount;
+	}
+	
+	public void setFollowingCount(int count)
+	{
+		this.followingCount = count;
+	}
+	
+	public int getFollowerCount()
+	{
+		return this.followerCount;
+	}
+	
+	public void setFollowerCount(int count)
+	{
+		this.followerCount = count;
+	}
+	
 	// Get the username of this user.
 	public String getUsername()
 	{
@@ -32,6 +72,23 @@ public class UserStore {
 	{
 		this.username = username;
 	}    
+	
+	public String getAbout()
+	{
+		return this.about;
+	}
+	
+	public void setAbout(String about)
+	{
+		if(about == null)
+		{
+			this.about = "";
+		}
+		else
+		{
+			this.about = about;
+		}
+	}
 	
 	// Get the email of this user.
 	public String getEmail()

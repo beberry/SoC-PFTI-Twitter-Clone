@@ -69,7 +69,7 @@ public  final class CassandraHosts {
 	}	
 	
 	public void close() {
-		   cluster.shutdown();
+		   cluster.close();
 		}
 	
 }

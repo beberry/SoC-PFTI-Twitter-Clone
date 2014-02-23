@@ -98,7 +98,11 @@ public class UserModel {
 			us.setUsername(row.getString("Username"));
 			us.setEmail(row.getString("Email"));
 			us.setHashedPass(row.getString("Password"));
+			us.setPermissions(row.getSet("Permissions", String.class));
+			us.setAbout(row.getString("About"));
 			us.setValid(true);
+			
+			us = this.setUserStats(us);
 			
 			session.close();
 			return us;
@@ -121,26 +125,33 @@ public class UserModel {
 		
 		if (rs.isExhausted())
 		{
-			
-			// User with such details found.
-			
-			Row row = rs.one();
-			
-			UserStore us = new UserStore();
-			us.setUsername(row.getString("Username"));
-			us.setEmail(row.getString("Email"));
-			us.setHashedPass(row.getString("Password"));
-			us.setPermissions(row.getSet("Permissions", String.class));
-			
-			session.close();
-			return us;
-		}
-		else
-		{
 			System.out.println("User not found found.");
 			
 			session.close();
 			return null;
+			
+			
+		}
+		else
+		{
+			
+			// User with such details found.
+			
+						Row row = rs.one();
+						
+						UserStore us = new UserStore();
+						us.setUsername(row.getString("Username"));
+						us.setEmail(row.getString("Email"));
+						us.setHashedPass(row.getString("Password"));
+						us.setPermissions(row.getSet("Permissions", String.class));
+						us.setAbout(row.getString("About"));
+						us.setValid(true);
+						
+						session.close();
+						
+						us = this.setUserStats(us);
+						
+						return us;
 		}
 		
 	}
@@ -257,6 +268,8 @@ public class UserModel {
 				us.setUsername(username);
 				us.setEmail(email);
 				us.setHashedPass(hashedPass);
+				
+				us = this.setUserStats(us);
 				
 				// Add the username to the dictionary.
 				String usernameLower = username.toLowerCase();
@@ -426,12 +439,12 @@ public class UserModel {
 		// Inceremnt userstats
 		
 		if (rs.isExhausted()) {
-			statement = session.prepare("UPDATE Userstats SET Following=Following+1 WHERE Username='"+whoUsername+"'");
+			statement = session.prepare("UPDATE User_stats SET Following=Following+1 WHERE Username='"+whoUsername+"'");
 			boundStatement = new BoundStatement(statement);
 			
 			rs = session.execute(boundStatement);
 			
-			statement = session.prepare("UPDATE Userstats SET Followers=Followers+1 WHERE Username='"+followsUsername+"'");
+			statement = session.prepare("UPDATE User_stats SET Followers=Followers+1 WHERE Username='"+followsUsername+"'");
 			boundStatement = new BoundStatement(statement);
 			
 			
@@ -463,12 +476,12 @@ public class UserModel {
 		rs = session.execute(boundStatement);
 		
 		if (rs.isExhausted()) {
-			statement = session.prepare("UPDATE Userstats SET Following=Following-1 WHERE Username='"+whoUsername+"'");
+			statement = session.prepare("UPDATE User_stats SET Following=Following-1 WHERE Username='"+whoUsername+"'");
 			boundStatement = new BoundStatement(statement);
 			
 			rs = session.execute(boundStatement);
 			
-			statement = session.prepare("UPDATE Userstats SET Followers=Followers-1 WHERE Username='"+unfollowsUsername+"'");
+			statement = session.prepare("UPDATE User_stats SET Followers=Followers-1 WHERE Username='"+unfollowsUsername+"'");
 			boundStatement = new BoundStatement(statement);
 			
 			rs = session.execute(boundStatement);
@@ -481,6 +494,189 @@ public class UserModel {
 		}
 	}
 	
+	public UserStore setUserStats(UserStore us)
+	{
+		String username = us.getUsername();
+		System.out.println(username);
+		// Insert the info.
+		Session session = cluster.connect(keyspace);
+		
+		// Add the record - which user is following which
+		PreparedStatement statement = session.prepare("SELECT * FROM User_stats WHERE Username='"+username+"'");
+		BoundStatement boundStatement = new BoundStatement(statement);
+		
+		ResultSet rs = session.execute(boundStatement);
+		
+		if (!rs.isExhausted()) {
+			Row row = rs.one();
+			
+			if(row != null)
+			{
+				us.setFollowerCount((int)row.getLong("Followers"));
+				us.setFollowingCount((int)row.getLong("Following"));
+				us.setTweetCount((int)row.getLong("Tweets"));
+			}
+			else
+			{
+				us.setFollowerCount(0);
+				us.setFollowingCount(0);
+				us.setTweetCount(0);
+			}
+			
+			
+			session.close();
+		} else {
+			
+			
+			session.close();
+		}
+		
+		return us;
+	}
+	
+	public UserStore updateProfile(UserStore us, String email, String about)
+	{
+		// TODO: clean passed data.
+		// TODO: if email valid, update both things, if not, update just about
+		// Validate email address.
+		
+		Session session = cluster.connect(keyspace);
+		
+		if(Convertors.isValidEmail(email))
+		{
+			us.setEmail(email);
+		}
+	
+		us.setAbout(about);
+
+		
+		// Add the record - which user is following which
+		PreparedStatement 	statement = session.prepare("UPDATE Users SET Email='"+us.getEmail()+"', About='"+about+"' WHERE Username='"+us.getUsername()+"'");
+		BoundStatement boundStatement = new BoundStatement(statement);
+		
+		ResultSet rs = session.execute(boundStatement);
+
+		session.close();
+	
+	
+		return us;
+	}
+	
+	public UserStore changePassword(UserStore us, String oldPassword,String newPassword,String newPasswordConf) throws WrongPasswordException, PasswordsDontMatchException, PasswordCantBeEmptyExceotion
+	{
+		// Check if all data is enterd.
+		if(oldPassword == null)
+		{
+			throw new PasswordCantBeEmptyExceotion();
+		}
+		else
+		{
+			if(oldPassword.length() < 1)
+			{
+				// warn that no password has been enterd
+				throw new PasswordCantBeEmptyExceotion();
+			}
+		}
+		
+		if(newPassword == null)
+		{
+			throw new PasswordCantBeEmptyExceotion();
+		}
+		else
+		{
+			if(newPassword.length() < 1)
+			{
+				// warn that no password has been enterd
+				throw new PasswordCantBeEmptyExceotion();
+			}
+		}
+		
+		if(newPasswordConf == null)
+		{
+			throw new PasswordCantBeEmptyExceotion();
+		}
+		else
+		{
+			if(newPasswordConf.length() < 1)
+			{
+				// warn that no password has been enterd
+				throw new PasswordCantBeEmptyExceotion();
+			}
+		}
+		
+		// Check if new passwords match.
+		if(newPassword.equals(newPasswordConf))
+		{
+			// Check if old password was valid.
+			String oldHashed = "";
+			
+			try
+			{
+				oldHashed = this.hashPass(oldPassword);
+			}
+			catch(UnsupportedEncodingException e)
+			{
+				// Exception thrown, don't log in the user.
+				return us;
+			}		
+			catch(java.security.NoSuchAlgorithmException e)
+			{
+				// Exception thrown, don't log in the user.
+				return us;
+			}
+			
+			Session session = cluster.connect(keyspace);
+			
+			PreparedStatement statement = session.prepare("SELECT * FROM users WHERE username='"+us.getUsername()+"' AND password='"+oldHashed+"';");
+			BoundStatement boundStatement = new BoundStatement(statement);
+			ResultSet rs = session.execute(boundStatement);
+			
+			if (rs.isExhausted())
+			{
+				System.out.println("No users found.");
+				
+				session.close();
+				
+				throw new WrongPasswordException();
+			}
+			else
+			{
+				// update password.
+				
+
+				try
+				{
+					newPassword = this.hashPass(newPassword);
+					
+					// Update the password.
+					statement = session.prepare("UPDATE Users SET Password='"+newPassword+"' WHERE Username='"+us.getUsername()+"'");
+					boundStatement = new BoundStatement(statement);
+					
+					rs = session.execute(boundStatement);
+					
+				}
+				catch(UnsupportedEncodingException e)
+				{
+					// Exception thrown, don't log in the user.
+					return us;
+				}		
+				catch(java.security.NoSuchAlgorithmException e)
+				{
+					// Exception thrown, don't log in the user.
+					return us;
+				}
+				
+				
+				session.close();
+				return us;
+			}
+		}
+		else
+		{
+			// Throw exception
+			throw new PasswordsDontMatchException();
+		}
+	}
 	
 	/**
 	 * 

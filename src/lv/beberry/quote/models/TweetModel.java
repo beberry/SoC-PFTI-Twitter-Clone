@@ -19,7 +19,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.UUID;
 
-
+import org.apache.commons.lang.*;
 
 import javax.servlet.http.HttpSession;
 
@@ -29,6 +29,8 @@ import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.*;
+import com.datastax.driver.core.querybuilder.Update.Where;
 
 import lv.beberry.quote.lib.*;
 import lv.beberry.quote.stores.TweetStore;
@@ -206,7 +208,7 @@ public class TweetModel {
 			
 			System.out.println("Tweet deleted..");
 			
-			statement = session.prepare("UPDATE Userstats SET Tweets=Tweets-1 WHERE Username='"+owner+"'");
+			statement = session.prepare("UPDATE User_stats SET Tweets=Tweets-1 WHERE Username='"+owner+"'");
 			boundStatement = new BoundStatement(statement);
 			
 			rs = session.execute(boundStatement);
@@ -224,28 +226,52 @@ public class TweetModel {
 		
 	}	
 	
-	public boolean addTweets(String username,String tweet)
+	public TweetStore getQuote(String id)
 	{
-		
-		/* String query = "INSERT INTO " + keyspace_name + "." + column_family + " (" + column_names + ") VALUES (" + column_values + ");";
-		statement = session.prepare(query);
-		boundStatement = new BoundStatement(statement);
-		
-		boundStatement.setString(0, key);
-		boundStatement.setString(1, subColNames[k]);
-		boundStatement.setMap(2, colValues);
-		session.execute(boundStatement);*/
-		
-		
-		String tweetUuid = Convertors.getTimeUUID().toString();
+		TweetStore ts;
 		
 		Session session = cluster.connect(keyspace);
-		// TODO: enscape strings!!!!!!
-		// Insert into the main timeline
-		PreparedStatement statement = session.prepare("INSERT INTO main_timeline (Author, Quote_id, Text, Retweets) values('"+username+"',"+tweetUuid+",'"+tweet+"',0);");
 		
+		PreparedStatement statement = session.prepare("SELECT * FROM main_timeline WHERE Quote_id="+id+" ALLOW FILTERING;");
 		BoundStatement boundStatement = new BoundStatement(statement);
+		
 		ResultSet rs = session.execute(boundStatement);
+		
+		if (rs.isExhausted()) {
+			System.out.println("The tweet with id "+id+" was not found." );
+			
+			return null;
+			
+		} else {
+			Row row = rs.one();
+			
+				ts = new TweetStore();
+				ts.setTweet(row.getString("Text"));
+				ts.setUser(row.getString("Author"));
+				ts.setTimeUuid(row.getUUID("Quote_id"));
+				
+				return ts;
+		}
+	}
+	
+	public boolean addTweets(String username,String tweet)
+	{
+		//String tweetUuid = Convertors.getTimeUUID().toString();
+		
+		Session session = cluster.connect(keyspace);
+		
+		tweet = StringEscapeUtils.escapeHtml(tweet);
+
+		System.out.println(tweet);
+		
+		// Insert into the main timeline
+		Insert queryINS = QueryBuilder.insertInto(this.keyspace, "main_timeline")
+				.value("Author", username)
+	            .value("Quote_id", Convertors.getTimeUUID())
+	            .value("Text", tweet)
+	            .value("Retweets", 0);
+		
+		ResultSet rs = session.execute(queryINS.toString());
 		
 		
 		System.out.println("aaainseeery");
@@ -254,11 +280,11 @@ public class TweetModel {
 		if (rs.isExhausted()) {
 			System.out.println("Tweet Added..");
 			
+			Update.Where queryUPD = QueryBuilder.update("User_stats").with(QueryBuilder.incr("Tweets")).where(QueryBuilder.eq("Username",username));
 			
-			statement = session.prepare("UPDATE Userstats SET Tweets=Tweets+1 WHERE Username='"+username+"'");
-			boundStatement = new BoundStatement(statement);
-			
-			rs = session.execute(boundStatement);
+
+
+			rs = session.execute(queryUPD.toString());
 			session.close();
 			
 			return true;

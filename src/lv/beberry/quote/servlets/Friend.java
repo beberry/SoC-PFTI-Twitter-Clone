@@ -21,7 +21,6 @@ import lv.beberry.quote.models.*;
 import lv.beberry.quote.stores.*;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 // Table for username dictionary
 // CREATE TABLE User_dictionary (Dict_Key varchar, Username varchar, PRIMARY KEY(DictKey,Username));
@@ -113,6 +112,11 @@ public class Friend extends HttpServlet {
 				{
 					request.setAttribute("followedBy", followedBy);
 				}
+				
+				UserStore us = um.getUser((String)session.getAttribute("userid"));
+				
+				request.setAttribute("myUserData", us);
+				
 				
 				//request.setAttribute("Tweets", tweetList); //Set a bean with the list in it
 				RequestDispatcher rd = request.getRequestDispatcher("/Friend.jsp"); 

@@ -35,6 +35,14 @@ public static java.util.UUID getTimeUUID()
         return buffer;
     }
  
+ public static boolean isValidEmail(String email) {
+	 // Taken from http://stackoverflow.com/questions/624581/what-is-the-best-java-email-address-validation-method
+     java.util.regex.Pattern p = java.util.regex.Pattern.compile(".+@.+\\.[a-z]+");
+     java.util.regex.Matcher m = p.matcher(email);
+     
+     return m.matches();
+}
+ 
 public static byte[] longToByteArray(long value)
    {
 byte[] buffer = new byte[8]; //longs are 8 bytes I believe

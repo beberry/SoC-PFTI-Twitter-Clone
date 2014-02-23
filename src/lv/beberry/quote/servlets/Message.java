@@ -61,7 +61,7 @@ public class Message extends HttpServlet {
 			TweetModel tm = new TweetModel();
 			tm.setCluster(cluster);
 			
-			LinkedList<TweetStore> tweetList;
+			LinkedList<TweetStore> tweetList = null;
 			
 			
 			if(args.length > 2)
@@ -104,10 +104,17 @@ public class Message extends HttpServlet {
 						tweetList = null;
 					}
 				}
-				else if(args[2].equals("message"))
+				else if(args[2].equals("id"))
 				{
 					// Display a specific message
-					tweetList = null;
+					if(args.length > 3)
+					{
+						String reqQuoteId = args[3];
+						
+						tweetList = new LinkedList<TweetStore>();
+						
+						tweetList.add(tm.getQuote(reqQuoteId));
+					}
 				}
 				else
 				{
