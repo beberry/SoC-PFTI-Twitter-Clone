@@ -45,7 +45,6 @@ $.fn.suggestions = function (url,inputId,suggestionId,redUrl,options)
 				$(opts.suggestionId).fadeOut();
 			}
 		});
-
 	});
 
 	
@@ -58,11 +57,13 @@ $.fn.suggestions = function (url,inputId,suggestionId,redUrl,options)
 		    	htmlResp = "";
 		    	
 			    $.each(data, function(index, element) {
+			    	   	
 
 			    	firstPart = element.substring(0,suggestion.length);
 			    	secondPart = element.substring(suggestion.length,element.length);
 			    	
-			
+
+			    	
 			    	htmlResp = htmlResp+'<li class="active" data-value="'+element+'"><a href="'+opts.redUrl+element+'"><strong>'+firstPart+'</strong>'+secondPart+'</a></li>';
 			    });
 	

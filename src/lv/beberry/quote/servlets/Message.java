@@ -76,7 +76,7 @@ public class Message extends HttpServlet {
 						um.setCluster(cluster);
 						
 						String reqUsername = args[3];
-						
+						//System.out.println(reqUsername);
 						if(um.userExists(reqUsername))
 						{
 							tweetList = tm.getTweetsBy(reqUsername,0,0);
@@ -92,6 +92,8 @@ public class Message extends HttpServlet {
 							{
 								request.setAttribute("follow", true);
 							}
+							
+							request.setAttribute("page-ownerUS", um.getUser(reqUsername));
 						}
 						else
 						{
@@ -179,11 +181,6 @@ public class Message extends HttpServlet {
 				String tweet	= request.getParameter("tweetText");
 				
 				
-				
-				
-				// To-Do: Remove html, and other crap from the data + trim it.
-				
-				
 				// Insert data into the db.
 				
 				tm.addTweets(username,tweet);
@@ -217,6 +214,9 @@ public class Message extends HttpServlet {
 					
 							request.setAttribute("PageType", " by "+reqUsername);
 							request.setAttribute("page-owner", reqUsername);
+							
+							
+							request.setAttribute("page-ownerUS", um.getUser(reqUsername));
 						}
 						else
 						{
@@ -247,13 +247,50 @@ public class Message extends HttpServlet {
 				request.setAttribute("Tweets", tweetList); //Set a bean with the list in it
 			}
 			
-			RequestDispatcher rd = request.getRequestDispatcher("/RenderTweets.jsp"); 
-	
-			rd.forward(request, response);
+			if(request.getParameter("ajax") == null)
+			{
+				RequestDispatcher rd = request.getRequestDispatcher("/RenderTweets.jsp"); 
+		
+				rd.forward(request, response);
+			}
 		}
 		
 	}
-	// Question: can you call doGet from doPost?
-	// Question: addTweets method in the message.java? Do I need to use tweetstore when inserting?
-	// Question: XSS, SQL injections?
+	
+	public void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		HttpSession session = request.getSession();
+		
+		String args[]=Convertors.SplitRequestPath(request);
+		
+		
+		if ((session.getAttribute("userid") == null) || (session.getAttribute("userid") == ""))
+		{
+			// Display login page...
+			RequestDispatcher rd = request.getRequestDispatcher("/Login.jsp"); 
+
+			rd.forward(request, response);
+		}
+		else
+		{
+			if(args.length > 2)
+			{
+				TweetModel tm = new TweetModel();
+				tm.setCluster(cluster);	
+				 
+				String quoteId = args[2];
+				String ownerId = tm.getQuote(quoteId).getUser();
+				
+				// Is trying to delete a quote.
+				if(tm.canTweetBeDeleted((String)session.getAttribute("userid"),ownerId,quoteId))
+				{
+					// The user can delete this quote.
+					
+					// Delete the quote.
+					tm.deleteTweet(ownerId,quoteId);
+					
+					response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+				}	
+			}
+		}
+	}
 }

@@ -3,7 +3,7 @@
 <%@ include file="HeaderClose.jsp" %>
 
 <!-- Login form -->
-<form role="form" action="/leQuote/login" method="post" style="max-width:350px;" autocomplete="off">
+<form role="form" action="/leQuote/login" method="post" class="loginForm" autocomplete="off">
  <h2 class="form-signin-heading">Please sign in</h2>
  <div class="submitErrorList form-group warning">
 			<%

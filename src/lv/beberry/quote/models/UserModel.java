@@ -1,48 +1,38 @@
 package lv.beberry.quote.models;
 
-/*
- * Expects a cassandra columnfamily defined as
- * use keyspace2;
- * CREATE TABLE Tweets (
- * user varchar,
- *  interaction_time timeuuid,
- *  tweet varchar,
- *  PRIMARY KEY (user)
- * ) WITH CLUSTERING ORDER BY (interaction_time DESC);
- * To manually generate a UUID use:
- * http://www.famkruithof.net/uuid/uuidgen
- */
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.*;
 
 import java.io.UnsupportedEncodingException;
 import java.security.*;
 import java.util.Collections;
 import java.util.Formatter;
 
-import javax.servlet.http.HttpSession;
+
+
+
+
+
+
+
+import java.util.UUID;
 
 import lv.beberry.quote.lib.*;
 import lv.beberry.quote.exceptions.*;
-import lv.beberry.quote.stores.TweetStore;
 import lv.beberry.quote.stores.UserStore;
 
 import java.util.ArrayList;
-
-//CREATE TABLE Users (Username varchar, Dateuuid uuid, Email varchar,Password varchar, Followers int, Following int, PRIMARY KEY(Username, Dateuuid));
-// CREATE INDEX passwordIndex ON Users (Password);
 
 public class UserModel {
 	
 	private String keyspace = "quotes";
 	private String salt		= "3rdYearModule";
-	
-	Cluster cluster;
+	private Cluster cluster;
 	
 	public UserModel(){
 		
@@ -52,11 +42,11 @@ public class UserModel {
 		this.cluster=cluster;
 	}
 	
-	
+	/**
+	 * Login method.
+	 */
 	public UserStore login(String username, String password)
 	{
-		// TO-DO: Check for xss and cql injection.
-		
 		// Hash the password.
 		try
 		{
@@ -77,15 +67,67 @@ public class UserModel {
 		
 		Session session = cluster.connect(keyspace);
 		
-		PreparedStatement statement = session.prepare("SELECT * FROM users WHERE username='"+username+"' AND password='"+password+"';");
-		BoundStatement boundStatement = new BoundStatement(statement);
-		ResultSet rs = session.execute(boundStatement);
+		Select.Where querySEL = QueryBuilder.select()
+				.from(this.keyspace, "Users")
+				.where(QueryBuilder.eq("Username", username))
+				.and(QueryBuilder.eq("Password", password));
+		
+		ResultSet rs = session.execute(querySEL.toString());
 		
 		if (rs.isExhausted())
 		{
-			System.out.println("No users found.");
+			//System.out.println("No users found.");
+			session.close();
+			
+			return null;
+		}
+		else
+		{
+			// User with such details found.
+			Row row = rs.one();
+			
+			UserStore us = new UserStore();
+			us.setUsername(row.getString("Username"));
+			us.setEmail(row.getString("Email"));
+			us.setHashedPass(row.getString("Password"));
+			us.setPermissions(row.getSet("Permissions", String.class));
+			us.setAbout(row.getString("About"));
+			us.setValid(true);
+			
+			us = this.setUserStats(us);
 			
 			session.close();
+			
+			return us;
+		}
+	}
+	
+	/**
+	 * Logout method, currently not implemented.
+	 */
+	public void logout()
+	{
+	}
+	
+	/**
+	 * Get a userstore by a specific username.
+	 */
+	public UserStore getUser(String username)
+	{
+		Session session = cluster.connect(keyspace);
+		
+		Select.Where querySEL = QueryBuilder.select()
+				.from(this.keyspace, "Users")
+				.where(QueryBuilder.eq("Username", username));
+		
+		ResultSet rs = session.execute(querySEL.toString());
+		
+		if (rs.isExhausted())
+		{
+			//System.out.println("User not found found.");
+			
+			session.close();
+			
 			return null;
 		}
 		else
@@ -102,58 +144,12 @@ public class UserModel {
 			us.setAbout(row.getString("About"));
 			us.setValid(true);
 			
+			session.close();
+			
 			us = this.setUserStats(us);
 			
-			session.close();
 			return us;
 		}
-	}
-	
-	public void logout()
-	{
-		
-	}
-	
-	public UserStore getUser(String username)
-	{
-
-		Session session = cluster.connect(keyspace);
-		
-		PreparedStatement statement = session.prepare("SELECT * FROM users WHERE username='"+username+"';");
-		BoundStatement boundStatement = new BoundStatement(statement);
-		ResultSet rs = session.execute(boundStatement);
-		
-		if (rs.isExhausted())
-		{
-			System.out.println("User not found found.");
-			
-			session.close();
-			return null;
-			
-			
-		}
-		else
-		{
-			
-			// User with such details found.
-			
-						Row row = rs.one();
-						
-						UserStore us = new UserStore();
-						us.setUsername(row.getString("Username"));
-						us.setEmail(row.getString("Email"));
-						us.setHashedPass(row.getString("Password"));
-						us.setPermissions(row.getSet("Permissions", String.class));
-						us.setAbout(row.getString("About"));
-						us.setValid(true);
-						
-						session.close();
-						
-						us = this.setUserStats(us);
-						
-						return us;
-		}
-		
 	}
 	
 	/**
@@ -170,19 +166,17 @@ public class UserModel {
 		boolean passwordsMatch = false;
 
 		Session session = cluster.connect(keyspace);
-		
-		PreparedStatement statement;
-		BoundStatement boundStatement;
 		ResultSet rs;
 		
 		// Do some checks before inserting the user info.
-		System.out.println(username);
+		//System.out.println(username);
 		
 		// Check if such user does not exist already.
-		statement      = session.prepare("SELECT * FROM Users WHERE username='"+username+"';");
-		boundStatement = new BoundStatement(statement);
+		Select.Where querySEL = QueryBuilder.select()
+				.from(this.keyspace, "Users")
+				.where(QueryBuilder.eq("Username", username));
 		
-		rs = session.execute(boundStatement);
+		rs = session.execute(querySEL.toString());
 		
 		if (rs.isExhausted())
 		{
@@ -197,13 +191,10 @@ public class UserModel {
 			passwordsMatch = true;
 		}
 		
-		
-		
 		// Check if any of the checks failed.
 		if(usernameTaken || !passwordsMatch)
 		{
 			// Throw errors.
-			
 			if(usernameTaken)
 			{
 				throw new UsernameTakenException();
@@ -215,14 +206,14 @@ public class UserModel {
 			}
 			
 			session.close();
+			
 			return null;
 		}
 		else
 		{
 			// Create new user store..
 			UserStore us = new UserStore();
-			
-			
+
 			// Hash the password.
 			String hashedPass = "";
 			
@@ -241,20 +232,19 @@ public class UserModel {
 				return null;
 			}
 			
-			// Get the UUID for the user.
-			String userUuid = Convertors.getTimeUUID().toString();
-			
 			// Can insert user info into the db.
 			
+			Insert queryINS = QueryBuilder.insertInto(this.keyspace, "Users")
+					.value("Username", username)
+		            .value("Dateuuid", Convertors.getTimeUUID())
+		            .value("Email", email)
+		            .value("Password", hashedPass);
 			
-			statement = session.prepare("INSERT INTO users (Username, Dateuuid, Email,Password) values('"+username+"',"+userUuid+",'"+email+"','"+hashedPass+"');");
-			boundStatement = new BoundStatement(statement);
-			
-			rs = session.execute(boundStatement);
+			rs = session.execute(queryINS.toString());
 			
 			if (!rs.isExhausted())
 			{
-				System.out.println("Problems when inserting data");
+				//System.out.println("Problems when inserting data");
 				
 				session.close();
 				
@@ -263,7 +253,7 @@ public class UserModel {
 			else
 			{
 				// Managed to add the user to the db.
-				System.out.println("User Added..");
+				//System.out.println("User Added..");
 
 				us.setUsername(username);
 				us.setEmail(email);
@@ -282,35 +272,40 @@ public class UserModel {
 							
 					// Add this key to the user dict.
 					
-					statement = session.prepare("INSERT INTO User_dictionary (Dict_Key, Username) values('"+key+"','"+usernameLower+"');");
-					boundStatement = new BoundStatement(statement);
+					queryINS = QueryBuilder.insertInto(this.keyspace, "User_dictionary")
+							.value("Dict_Key", key)
+				            .value("Username", usernameLower);
 					
-					rs = session.execute(boundStatement);					
+					rs = session.execute(queryINS.toString());					
 				}
 				
 				session.close();
+				
 				return us;
 			}
 		}
 	}
 	
+	/**
+	 * Get a list of users that this user follows.
+	 */
 	public ArrayList<String> getFollowedUsers(String userId)
 	{
-		// Get all users that this user is following.
-		
 		Session session = cluster.connect(keyspace);
 		
-		PreparedStatement statement = session.prepare("SELECT Following FROM Following WHERE Username='"+userId+"';");
-		BoundStatement boundStatement = new BoundStatement(statement);
+		Select.Where querySEL = QueryBuilder.select("Following")
+				.from(this.keyspace, "Following")
+				.where(QueryBuilder.eq("Username", userId));
 		
-		ResultSet rs = session.execute(boundStatement);
+		ResultSet rs = session.execute(querySEL.toString());
 		
 		ArrayList<String> followingList = null;
 		
 		if (rs.isExhausted()) {
-			System.out.println("No Follow records returned");
-		} else {
-			
+			//System.out.println("No Follow records returned");
+		}
+		else
+		{
 			 followingList = new ArrayList<String>();
 					 
 			for (Row row : rs)
@@ -324,22 +319,28 @@ public class UserModel {
 		return followingList;
 	}
 	
+	/**
+	 * Get a list of users who follow this user.
+	 */
 	public ArrayList<String> getFollowedByUsers(String userId)
 	{
 		// Get all users that this user is following.
-		
 		Session session = cluster.connect(keyspace);
 		
-		PreparedStatement statement = session.prepare("SELECT Followed FROM Followed WHERE Username='"+userId+"';");
-		BoundStatement boundStatement = new BoundStatement(statement);
-		
-		ResultSet rs = session.execute(boundStatement);
+		Select.Where querySEL = QueryBuilder.select("Followed")
+				.from(this.keyspace, "Followed")
+				.where(QueryBuilder.eq("Username", userId));
+	
+		ResultSet rs = session.execute(querySEL.toString());
 		
 		ArrayList<String> followingByList = null;
 		
-		if (rs.isExhausted()) {
-			System.out.println("No Follow records returned");
-		} else {
+		if (rs.isExhausted())
+		{
+			//System.out.println("No Follow records returned");
+		}
+		else
+		{
 			followingByList = new ArrayList<String>();
 			
 			for (Row row : rs)
@@ -353,27 +354,34 @@ public class UserModel {
 		return followingByList;
 	}
 	
+	/**
+	 * Get suggestions for "friends".
+	 */
 	public ArrayList<String> getSuggestions(String q)
 	{
-
 		ArrayList<String> results = new ArrayList<String>();
 		
 		// Now make a request for this query.
 		Session session = cluster.connect(keyspace);
 		
-		PreparedStatement statement = session.prepare("SELECT * FROM User_dictionary WHERE Dict_key='"+q+"';");
-		BoundStatement boundStatement = new BoundStatement(statement);
-		ResultSet rs = session.execute(boundStatement);
+		Select.Where querySEL = QueryBuilder.select()
+				.from(this.keyspace, "User_dictionary")
+				.where(QueryBuilder.eq("Dict_key", q));
+
+		ResultSet rs = session.execute(querySEL.toString());
 		
-		if (rs.isExhausted()) {
-
+		if (rs.isExhausted())
+		{
 			return null;
-		} else {
-			for (Row row : rs) {
-
+		}
+		else
+		{
+			for (Row row : rs)
+			{
 				results.add(row.getString("Username"));
 			}
 		}
+		
 		session.close();
 		
 		// Now sort the list.
@@ -382,132 +390,179 @@ public class UserModel {
 		return results;
 	}
 	
+	/**
+	 * Check if a user exists.
+	 */
 	public boolean userExists(String username)
 	{
 		// Now make a request for this query.
 		Session session = cluster.connect(keyspace);
 		
-		PreparedStatement statement = session.prepare("SELECT * FROM Users WHERE Username='"+username+"';");
-		BoundStatement boundStatement = new BoundStatement(statement);
-		ResultSet rs = session.execute(boundStatement);
+		Select.Where querySEL = QueryBuilder.select()
+				.from(this.keyspace, "Users")
+				.where(QueryBuilder.eq("Username", username));
 		
-		if (rs.isExhausted()) {
+		ResultSet rs = session.execute(querySEL.toString());
+		
+		if (rs.isExhausted())
+		{
 			session.close();
 			return false;
-		} else {
+		}
+		else
+		{
 			session.close();
 			return true;
 		}
 	}
 	
+	/**
+	 * Check if a user is following another user.
+	 */
 	public boolean checkIfFollowing(String byWho, String who)
 	{
 		Session session = cluster.connect(keyspace);
 		
-		PreparedStatement statement = session.prepare("SELECT * FROM Following WHERE Username='"+byWho+"' AND Following='"+who+"';");
-		BoundStatement boundStatement = new BoundStatement(statement);
-		ResultSet rs = session.execute(boundStatement);
+		Select.Where querySEL = QueryBuilder.select()
+				.from(this.keyspace, "Following")
+				.where(QueryBuilder.eq("Username", byWho))
+				.and(QueryBuilder.eq("Following", who));
+
+		ResultSet rs = session.execute(querySEL.toString());
 		
-		if (rs.isExhausted()) {
+		if (rs.isExhausted())
+		{
 			session.close();
 			return false;
-		} else {
+		}
+		else
+		{
 			session.close();
 			return true;
 		}
 	}
 	
+	/**
+	 * Start following a user.
+	 */
 	public void startFollowing(String whoUsername,String followsUsername)
 	{
-		// Insert the info.
-		Session session = cluster.connect(keyspace);
-		
-		// Add the record - which user is following which
-		PreparedStatement statement = session.prepare("INSERT INTO Following (Username, Following) VALUES('"+whoUsername+"','"+followsUsername+"');");
-		BoundStatement boundStatement = new BoundStatement(statement);
-		
-		ResultSet rs = session.execute(boundStatement);
-		
-		
-		// Add the record - which user is followed by which
-		statement = session.prepare("INSERT INTO Followed (Username, Followed) VALUES('"+followsUsername+"','"+whoUsername+"');");
-		boundStatement = new BoundStatement(statement);
-		
-		rs = session.execute(boundStatement);
-		
-		
-		// Inceremnt userstats
-		
-		if (rs.isExhausted()) {
-			statement = session.prepare("UPDATE User_stats SET Following=Following+1 WHERE Username='"+whoUsername+"'");
-			boundStatement = new BoundStatement(statement);
+		if(!this.checkIfFollowing(whoUsername, followsUsername))
+		{
+			// Insert the info.
+			Session session = cluster.connect(keyspace);
 			
-			rs = session.execute(boundStatement);
+			// Add the record - which user is following which
+			Insert queryINS = QueryBuilder.insertInto(this.keyspace, "Following")
+					.value("Username", whoUsername)
+		            .value("Following", followsUsername);
+	
+			ResultSet rs = session.execute(queryINS.toString());
 			
-			statement = session.prepare("UPDATE User_stats SET Followers=Followers+1 WHERE Username='"+followsUsername+"'");
-			boundStatement = new BoundStatement(statement);
+			// Add the record - which user is followed by which
+			queryINS = QueryBuilder.insertInto(this.keyspace, "Followed")
+					.value("Username", followsUsername)
+		            .value("Followed", whoUsername);
 			
+			rs = session.execute(queryINS.toString());
 			
-			rs = session.execute(boundStatement);
+			// Incerement userstats
 			
-			session.close();
-		} else {
-		
-			
-			session.close();
+			if (rs.isExhausted()) 
+			{
+				Update.Where queryUPD = QueryBuilder
+						.update("User_stats")
+						.with(QueryBuilder.incr("Following"))
+						.where(QueryBuilder.eq("Username",whoUsername));
+				
+				rs = session.execute(queryUPD.toString());
+				
+				queryUPD = QueryBuilder
+						.update("User_stats")
+						.with(QueryBuilder.incr("Followers"))
+						.where(QueryBuilder.eq("Username",followsUsername));
+	
+				rs = session.execute(queryUPD.toString());
+				
+				session.close();
+			}
+			else
+			{
+				session.close();
+			}
 		}
 	}	
 	
+	/**
+	 * End following a user.
+	 */
 	public void endFollowing(String whoUsername,String unfollowsUsername)
 	{
-		// Insert the info.
-		Session session = cluster.connect(keyspace);
-		
-		// Add the record - which user is following which
-		PreparedStatement statement = session.prepare("DELETE FROM Following WHERE Username='"+whoUsername+"' AND Following='"+unfollowsUsername+"'");
-		BoundStatement boundStatement = new BoundStatement(statement);
-		
-		ResultSet rs = session.execute(boundStatement);
-		
-		// Add the record - which user is followed by which
-		statement = session.prepare("DELETE FROM Followed WHERE Username='"+unfollowsUsername+"' AND Followed='"+whoUsername+"'");
-		boundStatement = new BoundStatement(statement);
-		
-		rs = session.execute(boundStatement);
-		
-		if (rs.isExhausted()) {
-			statement = session.prepare("UPDATE User_stats SET Following=Following-1 WHERE Username='"+whoUsername+"'");
-			boundStatement = new BoundStatement(statement);
+		if(this.checkIfFollowing(whoUsername, unfollowsUsername))
+		{
+			// Insert the info.
+			Session session = cluster.connect(keyspace);
 			
-			rs = session.execute(boundStatement);
-			
-			statement = session.prepare("UPDATE User_stats SET Followers=Followers-1 WHERE Username='"+unfollowsUsername+"'");
-			boundStatement = new BoundStatement(statement);
-			
-			rs = session.execute(boundStatement);
-			
-			session.close();
-		} else {
+			// Delete the records.
+			Delete.Where queryDEL = QueryBuilder.delete()
+					.from(this.keyspace, "Following")
+					.where(QueryBuilder.eq("Username", whoUsername))
+					.and(QueryBuilder.eq("Following", unfollowsUsername));
+	
+			ResultSet rs = session.execute(queryDEL.toString());
 			
 			
-			session.close();
+			queryDEL = QueryBuilder.delete()
+					.from(this.keyspace, "Followed")
+					.where(QueryBuilder.eq("Username", unfollowsUsername))
+					.and(QueryBuilder.eq("Followed", whoUsername));
+			
+			rs = session.execute(queryDEL.toString());
+			
+			if (rs.isExhausted())
+			{
+				Update.Where queryUPD = QueryBuilder
+						.update("User_stats")
+						.with(QueryBuilder.decr("Following"))
+						.where(QueryBuilder.eq("Username",whoUsername));
+				
+				rs = session.execute(queryUPD.toString());
+				
+				queryUPD = QueryBuilder
+						.update("User_stats")
+						.with(QueryBuilder.decr("Followers"))
+						.where(QueryBuilder.eq("Username",unfollowsUsername));
+	
+				rs = session.execute(queryUPD.toString());
+				
+				session.close();
+			}
+			else
+			{
+				session.close();
+			}
 		}
 	}
 	
+	/**
+	 * Get user statistics.
+	 */
 	public UserStore setUserStats(UserStore us)
 	{
 		String username = us.getUsername();
-		System.out.println(username);
+		//System.out.println(username);
 		// Insert the info.
 		Session session = cluster.connect(keyspace);
 		
 		// Add the record - which user is following which
-		PreparedStatement statement = session.prepare("SELECT * FROM User_stats WHERE Username='"+username+"'");
-		BoundStatement boundStatement = new BoundStatement(statement);
+		Select.Where querySEL = QueryBuilder.select()
+				.from(this.keyspace, "User_stats")
+				.where(QueryBuilder.eq("Username", username));
 		
-		ResultSet rs = session.execute(boundStatement);
+		ResultSet rs = session.execute(querySEL.toString());
 		
-		if (!rs.isExhausted()) {
+		if (!rs.isExhausted())
+		{
 			Row row = rs.one();
 			
 			if(row != null)
@@ -522,23 +577,23 @@ public class UserModel {
 				us.setFollowingCount(0);
 				us.setTweetCount(0);
 			}
-			
-			
+
 			session.close();
-		} else {
-			
-			
+		}
+		else
+		{
 			session.close();
 		}
 		
 		return us;
 	}
 	
+	/**
+	 * Update profile data for a user.
+	 */
 	public UserStore updateProfile(UserStore us, String email, String about)
 	{
 		// TODO: clean passed data.
-		// TODO: if email valid, update both things, if not, update just about
-		// Validate email address.
 		
 		Session session = cluster.connect(keyspace);
 		
@@ -551,17 +606,22 @@ public class UserModel {
 
 		
 		// Add the record - which user is following which
-		PreparedStatement 	statement = session.prepare("UPDATE Users SET Email='"+us.getEmail()+"', About='"+about+"' WHERE Username='"+us.getUsername()+"'");
-		BoundStatement boundStatement = new BoundStatement(statement);
+		Update.Where queryUPD = QueryBuilder
+				.update("Users")
+				.with(QueryBuilder.set("Email", us.getEmail()))
+				.and(QueryBuilder.set("About", us.getAbout()))
+				.where(QueryBuilder.eq("Username",us.getUsername()));
 		
-		ResultSet rs = session.execute(boundStatement);
+		ResultSet rs = session.execute(queryUPD.toString());
 
 		session.close();
-	
-	
+
 		return us;
 	}
 	
+	/**
+	 * Update password for a user.
+	 */
 	public UserStore changePassword(UserStore us, String oldPassword,String newPassword,String newPasswordConf) throws WrongPasswordException, PasswordsDontMatchException, PasswordCantBeEmptyExceotion
 	{
 		// Check if all data is enterd.
@@ -627,13 +687,17 @@ public class UserModel {
 			
 			Session session = cluster.connect(keyspace);
 			
-			PreparedStatement statement = session.prepare("SELECT * FROM users WHERE username='"+us.getUsername()+"' AND password='"+oldHashed+"';");
-			BoundStatement boundStatement = new BoundStatement(statement);
-			ResultSet rs = session.execute(boundStatement);
+			Select.Where querySEL = QueryBuilder.select()
+					.from(this.keyspace, "users")
+					.allowFiltering()
+					.where(QueryBuilder.eq("Username", us.getUsername()))
+					.and(QueryBuilder.eq("Password", oldHashed));
+			
+			ResultSet rs = session.execute(querySEL);
 			
 			if (rs.isExhausted())
 			{
-				System.out.println("No users found.");
+				//System.out.println("No users found.");
 				
 				session.close();
 				
@@ -649,11 +713,12 @@ public class UserModel {
 					newPassword = this.hashPass(newPassword);
 					
 					// Update the password.
-					statement = session.prepare("UPDATE Users SET Password='"+newPassword+"' WHERE Username='"+us.getUsername()+"'");
-					boundStatement = new BoundStatement(statement);
+					Update.Where queryUPD = QueryBuilder
+							.update("Users")
+							.with(QueryBuilder.set("Password", newPassword))
+							.where(QueryBuilder.eq("Username",us.getUsername()));
 					
-					rs = session.execute(boundStatement);
-					
+					rs = session.execute(queryUPD.toString());
 				}
 				catch(UnsupportedEncodingException e)
 				{
@@ -666,8 +731,8 @@ public class UserModel {
 					return us;
 				}
 				
-				
 				session.close();
+				
 				return us;
 			}
 		}
@@ -717,5 +782,4 @@ public class UserModel {
 	    formatter.close();
 	    return result;
 	}
-	
 }

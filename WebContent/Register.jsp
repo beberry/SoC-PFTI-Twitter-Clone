@@ -31,7 +31,7 @@
 	 	%>
 	 	</ul>
 	 </div>
-	<div class="formErrorList form-group hiddeMe warning">
+	<div class="formErrorList form-group hideMe warning">
 	</div>
 	
 	<div class="form-group">

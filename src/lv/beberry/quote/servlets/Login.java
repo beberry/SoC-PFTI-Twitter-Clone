@@ -98,7 +98,7 @@ public class Login extends HttpServlet {
 				if(userStore != null)
 				{
 					// The user was logged in.
-					System.out.println("test");
+					//System.out.println("test");
 					// Set the http session.
 					HttpSession httpSession = request.getSession();
 					httpSession.setAttribute("userid",userStore.getUsername());
@@ -117,7 +117,7 @@ public class Login extends HttpServlet {
 
 			}
 			else
-				{System.out.println("test3");
+				{//System.out.println("test3");
 				// Is not providing the data needed, show the login form.
 				RequestDispatcher rd = request.getRequestDispatcher("/Login.jsp"); 
 				rd.forward(request, response);

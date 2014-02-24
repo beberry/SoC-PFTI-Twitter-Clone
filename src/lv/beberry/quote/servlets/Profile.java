@@ -109,7 +109,7 @@ public class Profile extends HttpServlet {
 			
 			us = um.updateProfile(us, email, about);
 			
-			if(oldPassword != null || newPassword != null || newPasswordConf != null)
+			if((oldPassword != null || newPassword != null || newPasswordConf != null) && (!oldPassword.equals("") || !newPassword.equals("") || !newPasswordConf.equals("")))
 			{
 				try
 				{
@@ -138,14 +138,71 @@ public class Profile extends HttpServlet {
 			
 			request.setAttribute("userData", us);
 		
-			
-			RequestDispatcher rd = request.getRequestDispatcher("/Profile.jsp"); 
-	
-			rd.forward(request, response);
+			if(request.getParameter("ajax") == null)
+			{
+				RequestDispatcher rd = request.getRequestDispatcher("/Profile.jsp"); 
+		
+				rd.forward(request, response);
+			}
 		}
 		
 	}
-	// Question: can you call doGet from doPost?
-	// Question: addTweets method in the message.java? Do I need to use tweetstore when inserting?
-	// Question: XSS, SQL injections?
+	
+protected void doPut(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		
+		HttpSession session = request.getSession();
+		
+		
+		if ((session.getAttribute("userid") == null) || (session.getAttribute("userid") == ""))
+		{
+			// Display login page...
+			RequestDispatcher rd = request.getRequestDispatcher("/Login.jsp"); 
+			
+			rd.forward(request, response);
+		}
+		else
+		{
+			LinkedList<String> errors = new LinkedList<String>();
+			
+			String username = (String)session.getAttribute("userid");
+			
+			UserModel um = new UserModel();
+			um.setCluster(cluster);
+			UserStore us = um.getUser(username);
+			
+			// The user is logged in.
+			String email = request.getParameter("email");
+			String about = request.getParameter("aboutMe");
+	
+			String oldPassword 	   = request.getParameter("old_password");
+			String newPassword 	   = request.getParameter("password");
+			String newPasswordConf = request.getParameter("password_confirmation");
+			
+			System.out.println(email);
+			
+			us = um.updateProfile(us, email, about);
+			
+			if((oldPassword != null || newPassword != null || newPasswordConf != null) && (!oldPassword.equals("") || !newPassword.equals("") || !newPasswordConf.equals("")))
+			{
+				try
+				{
+					us = um.changePassword(us, oldPassword,newPassword,newPasswordConf);
+				}
+				catch(WrongPasswordException e)
+				{
+					errors.push("Wrong Password!");
+				}
+				catch(PasswordsDontMatchException e)
+				{
+					errors.push("New passwords don't match!");
+				}
+				catch(PasswordCantBeEmptyExceotion e)
+				{
+					errors.push("Password can't be empy!");
+				}
+				
+				request.setAttribute("Errors", errors); //Set a bean with the list in
+			}
+		}
+	}
 }

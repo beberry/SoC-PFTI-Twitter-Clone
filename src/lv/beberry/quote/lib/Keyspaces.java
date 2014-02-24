@@ -16,8 +16,6 @@ public final class Keyspaces {
 		
 		ArrayList<String> commands = new ArrayList<String>();
 		
-		
-		
 		commands.add("CREATE KEYSPACE IF NOT EXISTS Quotes WITH replication = {'class':'SimpleStrategy', 'replication_factor':1}");
 		commands.add("CREATE TABLE IF NOT EXISTS Quotes.Users (Username varchar, Dateuuid uuid, Email varchar,Password varchar, Permissions set<varchar>, About text, PRIMARY KEY(Username))");
 		commands.add("CREATE TABLE IF NOT EXISTS Quotes.User_stats (Username varchar, Followers counter, Following counter, Tweets counter, PRIMARY KEY(Username))");
@@ -42,7 +40,7 @@ public final class Keyspaces {
 		}
 		catch(Exception e)
 		{
-			System.out.println("Problems when creating keyspace: "+e.getMessage());
+			//System.out.println("Problems when creating keyspace: "+e.getMessage());
 		}
 		
 		session.close();

@@ -7,8 +7,7 @@
 	<h3>Find a friend</h3>
 	<!-- User search form -->
 	<div id="userSuggest" style="position:relative;">
-		<form autocomplete="off">
-			<input id="userSuggestInp" type="text" name="username" class="form-control" id="tweetUsername" placeholder="Search for a friend">
+			<input id="userSuggestInp" type="text" name="usernamezz" class="form-control" id="tweetUsername" placeholder="Search for a friend" autocomplete="off">
 			<ul id="suggestionList" class="typeahead dropdown-menu" style="width:100%;top: 36px; position:absolute; display: none;">
 			</ul>
 			<!-- End the user search form. -->
@@ -18,7 +17,6 @@
 					$('#userSuggest').suggestions("/leQuote/friend/","#userSuggestInp","#suggestionList","/leQuote/message/user/");
 				});
 			</script>
-		</form>
 	</div>
 	<% UserStore us = (UserStore)request.getAttribute("myUserData"); %>
 	<h3>You Follow (<%=us.getFollowingCount() %>)</h3>
@@ -35,7 +33,7 @@
 			iterator = following.iterator();     
 			while (iterator.hasNext())
 			{
-				String user = (String)iterator.next();
+				String user = Convertors.cl((String)iterator.next());
 				
 				%>
 				<a href="/leQuote/message/user/<%=user %>" ><%=user %></a><br />
@@ -72,7 +70,7 @@
 			iterator = followedBy.iterator();     
 			while (iterator.hasNext())
 			{
-				String user = (String)iterator.next();
+				String user = Convertors.cl((String)iterator.next());
 				
 				%>
 				<a href="/leQuote/message/user/<%=user %>" ><%=user %></a><br />

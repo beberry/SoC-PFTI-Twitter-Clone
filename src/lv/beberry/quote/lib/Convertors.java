@@ -6,6 +6,8 @@ import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang.StringEscapeUtils;
+
 
 
 public final class Convertors {
@@ -16,6 +18,11 @@ public void Convertors(){
 public static java.util.UUID getTimeUUID()
 {
         return java.util.UUID.fromString(new com.eaio.uuid.UUID().toString());
+}
+
+public static String cl(String text)
+{
+	return StringEscapeUtils.escapeHtml(text);
 }
 
  public static byte[] asByteArray(java.util.UUID uuid)
@@ -60,7 +67,7 @@ long value=0;
 long multiplier=1;
 for (int i = 7; i >= 0; i--) { //get from the right
 
-//System.out.println(Long.toHexString(multiplier)+"\t"+Integer.toHexString((int)buffer[i]));
+////System.out.println(Long.toHexString(multiplier)+"\t"+Integer.toHexString((int)buffer[i]));
 value=value+(buffer[i] & 0xff)*multiplier; // add the value * the hex mulitplier
 multiplier=multiplier <<8;
 }
@@ -74,7 +81,7 @@ int val=(int)buffer[i];
 // System.out.print(Integer.toHexString(val)+",");
 }
 
-//System.out.println();
+////System.out.println();
 }
 
 
@@ -133,11 +140,11 @@ args[argv]=new String();
 
 args[argv]=st.nextToken();
 try{
-//System.out.println("String was "+URLDecoder.decode(args[argv],"UTF-8"));
+////System.out.println("String was "+URLDecoder.decode(args[argv],"UTF-8"));
 args[argv]=URLDecoder.decode(args[argv],"UTF-8");
 
 }catch(Exception et){
-System.out.println("Bad URL Encoding"+args[argv]);
+//System.out.println("Bad URL Encoding"+args[argv]);
 }
 argv++;
 }

@@ -3,7 +3,6 @@ package lv.beberry.quote.servlets;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.LinkedList;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletConfig;
@@ -71,8 +70,6 @@ public class Friend extends HttpServlet {
 					// Is trying to get a suggestion list of users.
 					if(request.getParameter("q") != null)
 					{
-						// Todo Check the request for cql injections.
-						
 						// Get the suggestion JSON
 						String q = request.getParameter("q").toLowerCase();
 						
@@ -80,6 +77,18 @@ public class Friend extends HttpServlet {
 						um.setCluster(cluster);
 						
 						ArrayList<String> suggestions = um.getSuggestions(q);
+						
+						String tmpName;
+						if(suggestions != null)
+						{
+							for(int i = 0; i < suggestions.size(); i++)
+							{
+								// Prevent XSS
+								tmpName = Convertors.cl(suggestions.get(i));
+								suggestions.set(i, tmpName);
+							}
+							
+						}
 						
 						String json = new Gson().toJson(suggestions);
 						
@@ -195,10 +204,13 @@ public class Friend extends HttpServlet {
 			}
 			else
 			{
-				// Wasn't a json / ajax request, redirect back to user profile.
-				if(followUser != null || unFollowUser != null)
+				if(request.getParameter("ajax") == null)
 				{
-					response.sendRedirect("/leQuote/message/");
+					// Wasn't a json / ajax request, redirect back to user profile.
+					if(followUser != null || unFollowUser != null)
+					{
+						response.sendRedirect("/leQuote/message/");
+					}
 				}
 			}
 		}
